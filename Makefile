@@ -1,30 +1,30 @@
 ifndef CROSS_COMPILE
-CROSS_COMPILE = mips-sde-elf-
+CROSS_COMPILE = riscv64-unknown-elf-
 endif
-CC = $(CROSS_COMPILE)as
+CC = $(CROSS_COMPILE)gcc
 LD = $(CROSS_COMPILE)ld
 OBJCOPY = $(CROSS_COMPILE)objcopy
 OBJDUMP = $(CROSS_COMPILE)objdump
 
-OBJECTS = inst_rom.o
-
+CFLAGS = -g -Wall -Wl,-Map
 export	CROSS_COMPILE
 
+SRC := $(wildcard *.c)
+OBJS := $(patsubst %.c, %.o, $(SRC))
 # ********************
 # Rules of Compilation
 # ********************
 
-all: inst_rom.om inst_rom.bin inst_rom.asm inst_rom.data
+rv32-test.elf: boot.o main.o build_in_dram.o
+	$(LD) -T ram_dram.ld $^ -o $@
+main.o: main.c
+	$(CC) $(CFLAGS) -c $< -o $@
+build_in_dram.o: build_in_dram.c
+	$(CC) $(CFLAGS) -c $< -o $@
 
-%.o: %.S
-	$(CC) -mips32 $< -o $@
-inst_rom.om: ram.ld $(OBJECTS)
-	$(LD) -T ram.ld $(OBJECTS) -o $@
-inst_rom.bin: inst_rom.om
-	$(OBJCOPY) -O binary $<  $@
-inst_rom.asm: inst_rom.om
-	$(OBJDUMP) -D $< > $@
-inst_rom.data: inst_rom.bin
-	./Bin2Mem.exe -f $< -o $@
+boot.o: boot.S
+	$(CC) $(CFLAGS) -c $< -o $@
+
+.PHONY: clean
 clean:
 	rm -f *.o *.om *.bin *.data *.mif *.asm
